@@ -264,5 +264,145 @@ document.getElementById("update-viz2").onclick = function () {
 // Visualization 3: Gender Effects (Dual Line Chart)
 document.getElementById("update-viz3").onclick = function () {
   // TODO: Parse input, filter data, and draw dual line chart for gender trends
-  alert("Visualization 3: Implement gender comparison line chart.");
+  if (!data.length) {
+    alert("Please load the data first.");
+    return;
+  }
+  const input = document.getElementById("gender-name-select").value;
+  const name = input.trim().toUpperCase();
+  if (!name) {
+    alert("Please enter a name.");
+    return;
+  }
+
+  // Filter data for the selected name
+  const filtered = data.filter(
+    (d) => d.preusuel && d.preusuel.toUpperCase() === name
+  );
+
+  // Group by year and gender, sum counts
+  const nested = d3.groups(
+    filtered,
+    (d) => d.sexe,
+    (d) => d.annais
+  ).map(([sexe, years]) => ({
+    sexe,
+    values: years
+      .map(([year, records]) => ({
+        year: +year,
+        count: d3.sum(records, (r) => r.nombre),
+      }))
+      .sort((a, b) => a.year - b.year),
+  }));
+
+  // Set up SVG
+  const margin = { top: 30, right: 80, bottom: 40, left: 50 };
+  const width = 700 - margin.left - margin.right;
+  const height = 400 - margin.top - margin.bottom;
+
+  d3.select("#viz3-svg").selectAll("*").remove();
+
+  const svg = d3
+    .select("#viz3-svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // X and Y scales
+  const allYears = Array.from(new Set(filtered.map((d) => d.annais))).sort(
+    (a, b) => a - b
+  );
+  const x = d3.scaleLinear().domain(d3.extent(allYears)).range([0, width]);
+  const y = d3
+    .scaleLinear()
+    .domain([
+      0,
+      d3.max(nested, (d) => d3.max(d.values, (v) => v.count)) || 1,
+    ])
+    .nice()
+    .range([height, 0]);
+
+  // Axes
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+  svg.append("g").call(d3.axisLeft(y));
+
+  // Color scale for gender
+  const genderLabels = { "1": "Male", "2": "Female" };
+  const color = d3
+    .scaleOrdinal()
+    .domain(["1", "2"])
+    .range(["#1f77b4", "#e377c2"]);
+
+  // Draw lines
+  const line = d3
+    .line()
+    .x((d) => x(d.year))
+    .y((d) => y(d.count));
+
+  nested.forEach((d) => {
+    svg
+      .append("path")
+      .datum(d.values)
+      .attr("fill", "none")
+      .attr("stroke", color(d.sexe))
+      .attr("stroke-width", 2)
+      .attr("d", line);
+
+    // Add gender labels at the end of each line
+    const last = d.values[d.values.length - 1];
+    if (last) {
+      svg
+        .append("text")
+        .attr("x", x(last.year) + 5)
+        .attr("y", y(last.count))
+        .attr("dy", "0.35em")
+        .style("font-size", "12px")
+        .style("fill", color(d.sexe))
+        .text(genderLabels[d.sexe] || d.sexe);
+    }
+  });
+
+  // Axis labels
+  svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height + margin.bottom - 5)
+    .attr("text-anchor", "middle")
+    .text("Year");
+
+  svg
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -margin.left + 15)
+    .attr("text-anchor", "middle")
+    .text("Number of Babies");
+
+  // Legend
+  const legend = svg
+    .selectAll(".legend")
+    .data(["1", "2"])
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+  legend
+    .append("rect")
+    .attr("x", width + 10)
+    .attr("width", 14)
+    .attr("height", 14)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width + 30)
+    .attr("y", 7)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text((d) => genderLabels[d] || d);
 };
