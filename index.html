@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>French Baby Names Visualizations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- D3.js for interactive visualizations -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        background: #f9f9f9;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1,
+      h2 {
+        color: #2c3e50;
+      }
+      .viz-container {
+        margin-bottom: 60px;
+        background: #fff;
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px #0001;
+        /* width: fit-content; */
+        width: 800px;
+
+        height: fit-content;
+      }
+      .controls {
+        margin-bottom: 16px;
+      }
+      svg {
+        width: 100%;
+        height: fit-content;
+      }
+      .legend {
+        font-size: 0.9em;
+      }
+      
+    </style>
+  </head>
+  <body>
+    <h1>French Baby Names: Interactive Visualizations</h1>
+    <p>
+      Explore trends in baby names in France from 1900 to 2019. Use the controls
+      below each visualization to interact with the data.
+    </p>
+
+    <!-- Visualization 1: Name Trends Over Time -->
+    <div class="viz-container" id="viz1">
+      <h2>1. Name Popularity Over Time</h2>
+      <div class="controls">
+        <label for="name-select">Select Name(s):</label>
+        <input type="text" id="name-select" placeholder="e.g. Emma, Louis" />
+        <button id="update-viz1">Show Trends</button>
+      </div>
+      <svg id="viz1-svg"></svg>
+      <div class="legend" id="viz1-legend"></div>
+      <p>
+        <small>
+          <b>Strengths:</b> Allows comparison of multiple names over time,
+          reveals trends and sudden popularity changes.<br />
+          <b>Weaknesses:</b> Can become cluttered with too many names; requires
+          user to know which names to search.
+        </small>
+      </p>
+    </div>
+
+    <!-- Visualization 2: Regional Popularity -->
+    <div class="viz-container" id="viz2">
+      <h2>2. Regional Name Popularity</h2>
+      <div class="controls">
+        <label for="region-name-select">Select Name:</label>
+        <input type="text" id="region-name-select" placeholder="e.g. Emma" />
+        <button id="update-viz2">Show Map</button>
+      </div>
+      <svg id="viz2-svg"></svg>
+      <div class="legend" id="viz2-legend"></div>
+      <p>
+        <small>
+          <b>Strengths:</b> Shows geographic distribution of name popularity;
+          easy to spot regional effects.<br />
+          <b>Weaknesses:</b> Only shows one name at a time; may not show trends
+          over time.
+        </small>
+      </p>
+    </div>
+
+    <!-- Visualization 3: Gender Effects (Bonus) -->
+    <div class="viz-container" id="viz3">
+      <h2>3. Gender Differences in Name Popularity</h2>
+      <div class="controls">
+        <label for="gender-name-select">Select Name:</label>
+        <input type="text" id="gender-name-select" placeholder="e.g. Camille" />
+        <button id="update-viz3">Show Gender Trends</button>
+      </div>
+      <svg id="viz3-svg"></svg>
+      <div class="legend" id="viz3-legend"></div>
+      <p>
+        <small>
+          <b>Strengths:</b> Compares popularity by gender over time; highlights
+          unisex names.<br />
+          <b>Weaknesses:</b> Only for names used by both genders; may be less
+          relevant for strictly gendered names.
+        </small>
+      </p>
+    </div>
+
+    <!-- Placeholder for scripts: You will need to load and process your data here -->
+    <script src="script.js"></script>
+  </body>
+</html>
