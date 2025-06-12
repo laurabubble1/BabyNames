@@ -110,18 +110,32 @@ document.getElementById("update-viz1").onclick = function () {
       .attr("stroke-width", 2)
       .attr("d", line);
 
-    // Add name labels at the end of each line
-    const last = d.values[d.values.length - 1];
-    if (last) {
-      svg
-        .append("text")
-        .attr("x", x(last.year) + 5)
-        .attr("y", y(last.count))
-        .attr("dy", "0.35em")
-        .style("font-size", "12px")
-        .style("fill", color(d.name))
-        .text(d.name);
-    }
+    const legendGroup = svg
+  .append("g")
+  .attr("class", "legend-group")
+  .attr("transform", `translate(${width}, ${-margin.top + 10})`)
+  .attr("text-anchor", "end");
+
+const legendSpacing = 100; // space between legends
+
+nested.forEach((d, i) => {
+  const legend = legendGroup.append("g")
+    .attr("transform", `translate(${-i * legendSpacing}, 0)`);
+
+  legend.append("rect")
+    .attr("x", 0)
+    .attr("y", 4)
+    .attr("width", 12)
+    .attr("height", 2)
+    .style("fill", color(d.name));
+
+  legend.append("text")
+    .attr("x", -6)
+    .attr("y", 6)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text(d.name);
+});
   });
 
   // Axis labels
