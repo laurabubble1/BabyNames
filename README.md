@@ -5,11 +5,11 @@ Mini Visualization Project
 
 1. Clone the git repository on your computer : 
     - git clone https://github.com/laurabubble1/BabyNames.git
-cd your-repo-name
 
 2. Make sure you have python installed on your terminal.
 
-3. python3 -m http.server 8000
+3. After going inside of the repository : 
+    - python3 -m http.server 8000
 
 4. Go to localhost:8000 to use the web interface.
 
