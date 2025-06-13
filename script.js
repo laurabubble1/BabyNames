@@ -24,7 +24,7 @@ d3.dsv(";", "dpt2020.csv").then((loaddata) => {
   console.log(data);
 });
 // Visualization 1: Name Trends Over Time (Line Chart)
-document.getElementById("update-viz1").onclick = function () {
+function updateViz1() {
   // TODO: Parse input, filter data, and draw line chart for selected names
   // Get the input names (comma-separated)
   if (!data.length) {
@@ -109,33 +109,34 @@ document.getElementById("update-viz1").onclick = function () {
       .attr("stroke", color(d.name))
       .attr("stroke-width", 2)
       .attr("d", line);
+  });
 
-    const legendGroup = svg
-  .append("g")
-  .attr("class", "legend-group")
-  .attr("transform", `translate(${width}, ${-margin.top + 10})`)
-  .attr("text-anchor", "end");
+  // Legend
+  const legendGroup = svg
+    .append("g")
+    .attr("class", "legend-group")
+    .attr("transform", `translate(${width}, ${-margin.top + 10})`)
+    .attr("text-anchor", "end");
 
-const legendSpacing = 100; // space between legends
+  const legendSpacing = 100; // space between legends
 
-nested.forEach((d, i) => {
-  const legend = legendGroup.append("g")
-    .attr("transform", `translate(${-i * legendSpacing}, 0)`);
+  nested.forEach((d, i) => {
+    const legend = legendGroup.append("g")
+      .attr("transform", `translate(${-i * legendSpacing}, 0)`);
 
-  legend.append("rect")
-    .attr("x", 0)
-    .attr("y", 4)
-    .attr("width", 12)
-    .attr("height", 2)
-    .style("fill", color(d.name));
+    legend.append("rect")
+      .attr("x", 0)
+      .attr("y", 4)
+      .attr("width", 12)
+      .attr("height", 2)
+      .style("fill", color(d.name));
 
-  legend.append("text")
-    .attr("x", -6)
-    .attr("y", 6)
-    .attr("dy", "0.35em")
-    .style("font-size", "12px")
-    .text(d.name);
-});
+    legend.append("text")
+      .attr("x", -6)
+      .attr("y", 6)
+      .attr("dy", "0.35em")
+      .style("font-size", "12px")
+      .text(d.name);
   });
 
   // Axis labels
@@ -153,10 +154,20 @@ nested.forEach((d, i) => {
     .attr("y", -margin.left + 15)
     .attr("text-anchor", "middle")
     .text("Number of Babies");
-};
+}
+
+// Button click
+document.getElementById("update-viz1").onclick = updateViz1;
+
+// Enter key on input
+document.getElementById("region-name-select").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    updateViz2();
+  }
+});
 
 // Visualization 2: Regional Popularity (Choropleth Map)
-document.getElementById("update-viz2").onclick = function () {
+function updateViz2() {
   // Parse input, filter data, and draw map for selected name
   if (!data.length) {
     alert("Please load the data first.");
@@ -275,8 +286,18 @@ document.getElementById("update-viz2").onclick = function () {
   });
 };
 
+document.getElementById("update-viz2").onclick = updateViz2;
+
+// Enter key on input
+document.getElementById("name-select").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    updateViz1();
+  }
+});
+
+
 // Visualization 3: Gender Effects (Dual Line Chart)
-document.getElementById("update-viz3").onclick = function () {
+function updateViz3() {
   // TODO: Parse input, filter data, and draw dual line chart for gender trends
   if (!data.length) {
     alert("Please load the data first.");
@@ -406,17 +427,27 @@ document.getElementById("update-viz3").onclick = function () {
     .attr("transform", (d, i) => `translate(0,${i * 20})`);
 
   legend
-    .append("rect")
-    .attr("x", width + 10)
-    .attr("width", 14)
-    .attr("height", 14)
-    .style("fill", color);
-
-  legend
     .append("text")
     .attr("x", width + 30)
     .attr("y", 7)
     .attr("dy", "0.35em")
     .style("font-size", "12px")
     .text((d) => genderLabels[d] || d);
+
+  legend
+    .append("rect")
+    .attr("x", width + 10)
+    .attr("y", 4)
+    .attr("width", 12)
+    .attr("height", 2)
+    .style("fill", color);
 };
+
+document.getElementById("update-viz3").onclick = updateViz3;
+
+// Enter key on input
+document.getElementById("gender-name-select").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    updateViz3();
+  }
+});
