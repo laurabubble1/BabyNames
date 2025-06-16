@@ -296,13 +296,13 @@ document.getElementById("name-select").addEventListener("keydown", function (e) 
 });
 
 
-// Visualization 3: Gender Effects (Dual Line Chart)
+// Visualization 3: Gender Effects
 function updateViz3() {
-  // TODO: Parse input, filter data, and draw dual line chart for gender trends
   if (!data.length) {
     alert("Please load the data first.");
     return;
   }
+
   const input = document.getElementById("gender-name-select").value;
   const name = input.trim().toUpperCase();
   if (!name) {
@@ -311,28 +311,35 @@ function updateViz3() {
   }
 
   // Filter data for the selected name
-  const filtered = data.filter(
-    (d) => d.preusuel && d.preusuel.toUpperCase() === name
-  );
+  const filtered = data
+    .filter((d) => d.preusuel && d.preusuel.toUpperCase() === name && d.annais !== "XXXX")
+    .map((d) => ({
+      year: +d.annais,
+      sexe: d.sexe,
+      nombre: +d.nombre,
+    }));
 
-  // Group by year and gender, sum counts
-  const nested = d3.groups(
-    filtered,
-    (d) => d.sexe,
-    (d) => d.annais
-  ).map(([sexe, years]) => ({
-    sexe,
-    values: years
-      .map(([year, records]) => ({
-        year: +year,
-        count: d3.sum(records, (r) => r.nombre),
-      }))
-      .sort((a, b) => a.year - b.year),
-  }));
+  // Bin by decade
+  const binned = d3.groups(filtered, (d) => Math.floor(d.year / 10) * 10).map(([decade, records]) => {
+    const totalByGender = d3.rollup(
+      records,
+      v => d3.sum(v, d => d.nombre),
+      d => d.sexe
+    );
+    const total = d3.sum(records, d => d.nombre);
+    return {
+      decade,
+      malePct: (totalByGender.get("1") || 0) / total,
+      femalePct: (totalByGender.get("2") || 0) / total
+    };
+  });
+
+  // Sort by decade
+  binned.sort((a, b) => a.decade - b.decade);
 
   // Set up SVG
-  const margin = { top: 30, right: 80, bottom: 40, left: 50 };
-  const width = 700 - margin.left - margin.right;
+  const margin = { top: 20, right: 80, bottom: 40, left: 60 };
+  const width = 600 - margin.left - margin.right;
   const height = 400 - margin.top - margin.bottom;
 
   d3.select("#viz3-svg").selectAll("*").remove();
@@ -344,103 +351,101 @@ function updateViz3() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // X and Y scales
-  const allYears = Array.from(new Set(filtered.map((d) => d.annais))).sort(
-    (a, b) => a - b
-  );
-  const x = d3.scaleLinear().domain(d3.extent(allYears)).range([0, width]);
+  // Y scale (decades) with constant spacing
   const y = d3
-    .scaleLinear()
-    .domain([
-      0,
-      d3.max(nested, (d) => d3.max(d.values, (v) => v.count)) || 1,
-    ])
-    .nice()
-    .range([height, 0]);
+    .scaleBand()
+    .domain(binned.map(d => d.decade))
+    .range([0, height])
+    .paddingInner(0.3) // controls spacing between bars
+    .paddingOuter(0.2); // controls spacing above the first and below the last bar
 
-  // Axes
+
+  // X scale (percentage from 0 to 1)
+  const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
+
+  // Color
+  const color = {
+    male: "#1f77b4",
+    female: "#e377c2",
+  };
+
+  // Draw bars
+  svg
+    .selectAll(".bar-male")
+    .data(binned)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-male")
+    .attr("x", 0)
+    .attr("y", d => y(d.decade))
+    .attr("width", d => x(d.malePct))
+    .attr("height", y.bandwidth())
+    .attr("fill", color.male);
+
+  svg
+    .selectAll(".bar-female")
+    .data(binned)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-female")
+    .attr("x", d => x(d.malePct))
+    .attr("y", d => y(d.decade))
+    .attr("width", d => x(d.femalePct))
+    .attr("height", y.bandwidth())
+    .attr("fill", color.female);
+
+  // Add Y axis
+  svg.append("g").call(d3.axisLeft(y).tickFormat(d => `${d}s`));
+
+  // Add X axis
   svg
     .append("g")
     .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
-  svg.append("g").call(d3.axisLeft(y));
+    .call(d3.axisBottom(x).tickFormat(d3.format(".0%")));
 
-  // Color scale for gender
-  const genderLabels = { "1": "Male", "2": "Female" };
-  const color = d3
-    .scaleOrdinal()
-    .domain(["1", "2"])
-    .range(["#1f77b4", "#e377c2"]);
-
-  // Draw lines
-  const line = d3
-    .line()
-    .x((d) => x(d.year))
-    .y((d) => y(d.count));
-
-  nested.forEach((d) => {
-    svg
-      .append("path")
-      .datum(d.values)
-      .attr("fill", "none")
-      .attr("stroke", color(d.sexe))
-      .attr("stroke-width", 2)
-      .attr("d", line);
-
-    // Add gender labels at the end of each line
-    const last = d.values[d.values.length - 1];
-    if (last) {
-      svg
-        .append("text")
-        .attr("x", x(last.year) + 5)
-        .attr("y", y(last.count))
-        .attr("dy", "0.35em")
-        .style("font-size", "12px")
-        .style("fill", color(d.sexe))
-        .text(genderLabels[d.sexe] || d.sexe);
-    }
-  });
-
-  // Axis labels
+  // Add axis labels
   svg
     .append("text")
     .attr("x", width / 2)
-    .attr("y", height + margin.bottom - 5)
+    .attr("y", height + 35)
     .attr("text-anchor", "middle")
-    .text("Year");
+    .text("Percentage");
 
   svg
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("x", -height / 2)
-    .attr("y", -margin.left + 15)
+    .attr("y", -45)
     .attr("text-anchor", "middle")
-    .text("Number of Babies");
+    .text("Decade");
 
-  // Legend
+  // Add legend
   const legend = svg
     .selectAll(".legend")
-    .data(["1", "2"])
+    .data([
+      { label: "Male", color: color.male },
+      { label: "Female", color: color.female },
+    ])
     .enter()
     .append("g")
     .attr("class", "legend")
-    .attr("transform", (d, i) => `translate(0,${i * 20})`);
-
-  legend
-    .append("text")
-    .attr("x", width + 30)
-    .attr("y", 7)
-    .attr("dy", "0.35em")
-    .style("font-size", "12px")
-    .text((d) => genderLabels[d] || d);
+    .attr("transform", (d, i) => `translate(${width + 10},${i * 20})`);
 
   legend
     .append("rect")
-    .attr("x", width + 10)
+    .attr("x", 0)
     .attr("y", 4)
     .attr("width", 12)
-    .attr("height", 2)
-    .style("fill", color);
+    .attr("height", 12)
+    .style("fill", d => d.color);
+
+  legend
+    .append("text")
+    .attr("x", 18)
+    .attr("y", 10)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text(d => d.label);
 };
 
 document.getElementById("update-viz3").onclick = updateViz3;
