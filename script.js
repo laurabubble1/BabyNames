@@ -168,123 +168,154 @@ document.getElementById("region-name-select").addEventListener("keydown", functi
 
 // Visualization 2: Regional Popularity (Choropleth Map)
 function updateViz2() {
-  // Parse input, filter data, and draw map for selected name
+  // Get the input names (comma-separated)
   if (!data.length) {
     alert("Please load the data first.");
     return;
   }
   const input = document.getElementById("region-name-select").value;
-  const name = input.trim().toUpperCase();
-  if (!name) {
-    alert("Please enter a name.");
+  const names = input
+    .split(",")
+    .map((n) => n.trim().toUpperCase())
+    .filter((n) => n);
+
+  if (!names.length) {
+    alert("Please enter at least one name.");
     return;
   }
 
-  // Filter data for the selected name
-  const filtered = data.filter(
-    (d) => d.preusuel && d.preusuel.toUpperCase() === name
-  );
-
-  // Group by department, sum counts
-  const dptCounts = d3.rollup(
-    filtered,
-    (v) => d3.sum(v, (d) => d.nombre),
-    (d) => d.dpt
-  );
-
-  // Load GeoJSON for French departments
+  // Load GeoJSON data for French departments
   d3.json("departements-version-simplifiee.geojson").then((geo) => {
-    // Prepare color scale
-    const values = Array.from(dptCounts.values());
-    const color = d3
-      .scaleQuantize()
-      .domain([d3.min(values) || 0, d3.max(values) || 1])
-      .range(d3.schemeBlues[6]);
+    const container = d3.select("#viz2-cards");
+    container.selectAll("*").remove(); // Clear previous charts
 
-    // Set up SVG
-    const width = 750,
-      height = 750;
-    const svg = d3
-      .select("#viz2-svg")
-      .attr("width", width)
-      .attr("height", height);
-    svg.selectAll("*").remove();
-    const projection = d3.geoConicConformal();
-    const path = d3.geoPath().projection(projection);
+    const n = names.length;
 
-    // Fit the projection to the SVG size and geo data
-    projection.fitSize([width, height], geo);
-    // Draw map
-    svg
-      .selectAll("path")
-      .data(geo.features)
-      .enter()
-      .append("path")
-      .attr("d", path)
-      .attr("fill", (d) => {
-        const val = dptCounts.get(d.properties.code);
-        return val ? color(val) : "#eee";
-      })
-      .attr("stroke", "#999")
-      .append("title")
-      .text((d) => {
-        const val = dptCounts.get(d.properties.code) || 0;
-        return `${d.properties.nom} (${d.properties.code}): ${val}`;
-      });
+    // Determine grid size based on number of names
+    let gridSize = 1;
+    if (n <= 2) {
+      gridSize = n;
+    } else if (n >= 8) {
+      gridSize = 4;
+    } else {
+      gridSize = Math.max(1, 2 * Math.floor(Math.log2(n - 1)));
+    }
 
-    // Add legend
-    const legendWidth = 200,
-      legendHeight = 10;
-    const legendSvg = svg
-      .append("g")
-      .attr(
-        "transform",
-        `translate(${width - legendWidth - 30},${height - 40})`
+    const svgSize = 750 / gridSize; // Size of each individual map
+    const legendHeight = 10;
+    const legendWidth = svgSize * 0.6;
+
+    names.forEach((name) => {
+      // Filter data for the selected name
+      const filtered = data.filter(
+        (d) => d.preusuel && d.preusuel.toUpperCase() === name
       );
 
-    const legendScale = d3
-      .scaleLinear()
-      .domain(color.domain())
-      .range([0, legendWidth]);
+      // Aggregate counts by department
+      const dptCounts = d3.rollup(
+        filtered,
+        (v) => d3.sum(v, (d) => d.nombre),
+        (d) => d.dpt
+      );
 
-    const legendAxis = d3
-      .axisBottom(legendScale)
-      .ticks(6)
-      .tickFormat(d3.format("d"));
+      // Define color scale based on value range
+      const values = Array.from(dptCounts.values());
+      const color = d3
+        .scaleQuantize()
+        .domain([d3.min(values) || 0, d3.max(values) || 1])
+        .range(d3.schemeBlues[6]);
 
-    // Gradient for legend
-    const defs = svg.append("defs");
-    const linearGradient = defs
-      .append("linearGradient")
-      .attr("id", "legend-gradient");
-    color.range().forEach((col, i, arr) => {
-      linearGradient
-        .append("stop")
-        .attr("offset", `${(i / (arr.length - 1)) * 100}%`)
-        .attr("stop-color", col);
+      // Create a container card for the map
+      const card = container
+        .append("div")
+        .style("border", "1px solid #ccc")
+        .style("padding", "5px")
+        .style("background", "#fff")
+        .style("box-shadow", "0 0 4px rgba(0,0,0,0.1)");
+
+      // Create SVG element for the map
+      const svg = card
+        .append("svg")
+        .attr("width", svgSize)
+        .attr("height", svgSize + 40); // Extra space for title and legend
+
+      // Set up geographic projection
+      const projection = d3.geoConicConformal();
+      const path = d3.geoPath().projection(projection);
+      projection.fitSize([svgSize, svgSize], geo);
+
+      // Draw departments with fill based on data values
+      svg
+        .selectAll("path")
+        .data(geo.features)
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("fill", (d) => {
+          const val = dptCounts.get(d.properties.code);
+          return val ? color(val) : "#eee";
+        })
+        .attr("stroke", "#999")
+        .append("title")
+        .text((d) => {
+          const val = dptCounts.get(d.properties.code) || 0;
+          return `${d.properties.nom} (${d.properties.code}): ${val}`;
+        });
+
+      // Add map title (name)
+      svg
+        .append("text")
+        .attr("x", svgSize / 2)
+        .attr("y", svgSize - 10)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .text(name);
+
+      // Create unique gradient for each legend
+      const defs = svg.append("defs");
+      const linearGradient = defs
+        .append("linearGradient")
+        .attr("id", `legend-gradient-${name}`)
+        .attr("x1", "0%")
+        .attr("x2", "100%");
+
+      // Define color stops in the gradient
+      color.range().forEach((col, i, arr) => {
+        linearGradient
+          .append("stop")
+          .attr("offset", `${(i / (arr.length - 1)) * 100}%`)
+          .attr("stop-color", col);
+      });
+
+      // Create legend group
+      const legendGroup = svg
+        .append("g")
+        .attr("transform", `translate(${(svgSize - legendWidth) / 2}, ${svgSize})`);
+
+      // Draw legend bar
+      legendGroup
+        .append("rect")
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .style("fill", `url(#legend-gradient-${name})`);
+
+      // Add legend axis
+      const legendScale = d3
+        .scaleLinear()
+        .domain(color.domain())
+        .range([0, legendWidth]);
+
+      const legendAxis = d3.axisBottom(legendScale).ticks(4).tickFormat(d3.format("d"));
+
+      legendGroup
+        .append("g")
+        .attr("transform", `translate(0, ${legendHeight})`)
+        .call(legendAxis)
+        .selectAll("text")
+        .style("font-size", "10px");
     });
-
-    legendSvg
-      .append("rect")
-      .attr("width", legendWidth)
-      .attr("height", legendHeight)
-      .style("fill", "url(#legend-gradient)");
-
-    legendSvg
-      .append("g")
-      .attr("transform", `translate(0,${legendHeight})`)
-      .call(legendAxis);
-
-    // Title
-    svg
-      .append("text")
-      .attr("x", width / 2)
-      .attr("y", height)
-      .attr("text-anchor", "middle")
-      .style("font-size", "18px")
-      .text(`Regional Popularity of "${name}"`);
   });
-};
+}
 
 document.getElementById("update-viz2").onclick = updateViz2;
 

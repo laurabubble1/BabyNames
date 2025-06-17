@@ -75,18 +75,17 @@
     <div class="viz-container" id="viz2">
       <h2>2. Regional Name Popularity</h2>
       <div class="controls">
-        <label for="region-name-select">Select Name:</label>
-        <input type="text" id="region-name-select" placeholder="e.g. Emma" />
+        <label for="region-name-select">Select Name(s):</label>
+        <input type="text" id="region-name-select" placeholder="e.g. Emma, Louis" />
         <button id="update-viz2">Show Map</button>
       </div>
-      <svg id="viz2-svg"></svg>
+      <div id="viz2-cards" style="display: flex; flex-wrap: wrap;"></div>
       <div class="legend" id="viz2-legend"></div>
       <p>
         <small>
           <b>Strengths:</b> Shows geographic distribution of name popularity;
           easy to spot regional effects.<br />
-          <b>Weaknesses:</b> Only shows one name at a time; may not show trends
-          over time.
+          <b>Weaknesses:</b> May not show trends over time ; slows down with many names;
         </small>
       </p>
     </div>
