@@ -313,8 +313,8 @@ function updateViz2() {
         .call(legendAxis)
         .selectAll("text")
         .style("font-size", "10px");
-    });
-  });
+    })
+  })
 }
 
 document.getElementById("update-viz2").onclick = updateViz2;
@@ -514,7 +514,7 @@ function updateViz3() {
       .attr("y", -4)
       .style("font-size", "10px")
       .text((d) => d.label);
-  });
+  })
 }
 
 
