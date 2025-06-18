@@ -60,7 +60,7 @@ function updateViz1() {
     }));
 
   // Set up SVG
-  const margin = { top: 30, right: 80, bottom: 40, left: 50 };
+  const margin = { top: 30, right: 30, bottom: 40, left: 50 };
   const width = 700 - margin.left - margin.right;
   const height = 400 - margin.top - margin.bottom;
 
@@ -160,9 +160,9 @@ function updateViz1() {
 document.getElementById("update-viz1").onclick = updateViz1;
 
 // Enter key on input
-document.getElementById("region-name-select").addEventListener("keydown", function (e) {
+document.getElementById("name-select").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
-    updateViz2();
+    updateViz1();
   }
 });
 
@@ -320,9 +320,9 @@ function updateViz2() {
 document.getElementById("update-viz2").onclick = updateViz2;
 
 // Enter key on input
-document.getElementById("name-select").addEventListener("keydown", function (e) {
+document.getElementById("region-name-select").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
-    updateViz1();
+    updateViz2();
   }
 });
 
@@ -335,149 +335,189 @@ function updateViz3() {
   }
 
   const input = document.getElementById("gender-name-select").value;
-  const name = input.trim().toUpperCase();
-  if (!name) {
-    alert("Please enter a name.");
+  const names = input
+    .split(",")
+    .map((n) => n.trim().toUpperCase())
+    .filter((n) => n);
+
+  if (!names.length) {
+    alert("Please enter at least one name.");
     return;
   }
 
-  // Filter data for the selected name
-  const filtered = data
-    .filter((d) => d.preusuel && d.preusuel.toUpperCase() === name && d.annais !== "XXXX")
-    .map((d) => ({
-      year: +d.annais,
-      sexe: d.sexe,
-      nombre: +d.nombre,
-    }));
+  const container = d3.select("#viz3-cards");
+  container.selectAll("*").remove(); // Clear previous charts
 
-  // Bin by decade
-  const binned = d3.groups(filtered, (d) => Math.floor(d.year / 10) * 10).map(([decade, records]) => {
-    const totalByGender = d3.rollup(
-      records,
-      v => d3.sum(v, d => d.nombre),
-      d => d.sexe
-    );
-    const total = d3.sum(records, d => d.nombre);
-    return {
-      decade,
-      malePct: (totalByGender.get("1") || 0) / total,
-      femalePct: (totalByGender.get("2") || 0) / total
+  const n = names.length;
+
+  // Consistent grid sizing logic from viz2
+  let gridSize = 1;
+  if (n >= 2) {
+    gridSize = 2;
+  }
+
+  const svgSize = 750 / gridSize;
+  const margin = { top: 50, right: 80, bottom: 40, left: 60 };
+  const width = svgSize - margin.left - margin.right;
+  const height = svgSize - margin.top - margin.bottom;
+
+  names.forEach((name) => {
+    const filtered = data
+      .filter((d) => d.preusuel && d.preusuel.toUpperCase() === name && d.annais !== "XXXX")
+      .map((d) => ({
+        year: +d.annais,
+        sexe: d.sexe,
+        nombre: +d.nombre,
+      }));
+
+    const binned = d3.groups(filtered, (d) => Math.floor(d.year / 10) * 10).map(([decade, records]) => {
+      const totalByGender = d3.rollup(
+        records,
+        (v) => d3.sum(v, (d) => d.nombre),
+        (d) => d.sexe
+      );
+      const total = d3.sum(records, (d) => d.nombre);
+      return {
+        decade,
+        malePct: (totalByGender.get("1") || 0) / total,
+        femalePct: (totalByGender.get("2") || 0) / total,
+        total,
+      }
+    });
+
+    binned.sort((a, b) => a.decade - b.decade);
+
+    // Card wrapper
+    const card = container
+      .append("div")
+      .style("border", "1px solid #ccc")
+      .style("background", "#fff")
+      .style("box-shadow", "0 0 4px rgba(0,0,0,0.1)")
+      .style("display", "inline-block");
+
+    const svg = card
+      .append("svg")
+      .attr("width", svgSize)
+      .attr("height", svgSize)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const y = d3
+      .scaleBand()
+      .domain(binned.map((d) => d.decade))
+      .range([0, height])
+      .paddingInner(0.3)
+      .paddingOuter(0.2);
+
+    const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
+
+    const color = {
+      male: "#1f77b4",
+      female: "#e377c2",
     };
+
+    svg
+      .selectAll(".bar-male")
+      .data(binned)
+      .enter()
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", (d) => y(d.decade))
+      .attr("width", (d) => x(d.malePct))
+      .attr("height", y.bandwidth())
+      .attr("fill", color.male);
+
+    svg
+      .selectAll(".bar-female")
+      .data(binned)
+      .enter()
+      .append("rect")
+      .attr("x", (d) => x(d.malePct))
+      .attr("y", (d) => y(d.decade))
+      .attr("width", (d) => x(d.femalePct))
+      .attr("height", y.bandwidth())
+      .attr("fill", color.female);
+
+    svg
+      .selectAll(".total-label")
+      .data(binned)
+      .enter()
+      .append("text")
+      .attr("x", (d) => x(d.malePct + d.femalePct) + 4)
+      .attr("y", (d) => y(d.decade) + y.bandwidth() / 2)
+      .attr("dy", "0.35em")
+      .style("font-size", "10px")
+      .text((d) => `Total: ${d3.format(",")(d.total)}`);
+
+    svg.append("g").call(d3.axisLeft(y).tickFormat((d) => `${d}s`));
+
+    svg
+      .append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(x).tickFormat(d3.format(".0%")));
+
+    svg
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", height + 30)
+      .attr("text-anchor", "middle")
+      .style("font-size", "10px")
+      .text("Percentage");
+
+    svg
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", -45)
+      .attr("text-anchor", "middle")
+      .style("font-size", "10px")
+      .text("Decade");
+
+    // Title
+    svg
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", -30)
+      .attr("text-anchor", "middle")
+      .style("font-size", "14px")
+      .style("font-weight", "bold")
+      .text(name);
+
+    // Legend (top-center)
+    const legend = svg
+      .append("g")
+      .attr("class", "legend")
+      .attr("transform", `translate(${width / 2 - 50}, -5)`);
+
+    const legendItems = legend
+      .selectAll(".legend-item")
+      .data([
+        { label: "Male", color: color.male },
+        { label: "Female", color: color.female },
+      ])
+      .enter()
+      .append("g")
+      .attr("class", "legend-item")
+      .attr("transform", (d, i) => `translate(${i * 80}, 0)`);
+
+    legendItems
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", -10)
+      .attr("width", 12)
+      .attr("height", 12)
+      .style("fill", (d) => d.color);
+
+    legendItems
+      .append("text")
+      .attr("x", 18)
+      .attr("y", -4)
+      .style("font-size", "10px")
+      .text((d) => d.label);
   });
-
-  // Sort by decade
-  binned.sort((a, b) => a.decade - b.decade);
-
-  // Set up SVG
-  const margin = { top: 20, right: 80, bottom: 40, left: 60 };
-  const width = 600 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
-
-  d3.select("#viz3-svg").selectAll("*").remove();
-
-  const svg = d3
-    .select("#viz3-svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  // Y scale (decades) with constant spacing
-  const y = d3
-    .scaleBand()
-    .domain(binned.map(d => d.decade))
-    .range([0, height])
-    .paddingInner(0.3) // controls spacing between bars
-    .paddingOuter(0.2); // controls spacing above the first and below the last bar
+}
 
 
-  // X scale (percentage from 0 to 1)
-  const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
-
-  // Color
-  const color = {
-    male: "#1f77b4",
-    female: "#e377c2",
-  };
-
-  // Draw bars
-  svg
-    .selectAll(".bar-male")
-    .data(binned)
-    .enter()
-    .append("rect")
-    .attr("class", "bar-male")
-    .attr("x", 0)
-    .attr("y", d => y(d.decade))
-    .attr("width", d => x(d.malePct))
-    .attr("height", y.bandwidth())
-    .attr("fill", color.male);
-
-  svg
-    .selectAll(".bar-female")
-    .data(binned)
-    .enter()
-    .append("rect")
-    .attr("class", "bar-female")
-    .attr("x", d => x(d.malePct))
-    .attr("y", d => y(d.decade))
-    .attr("width", d => x(d.femalePct))
-    .attr("height", y.bandwidth())
-    .attr("fill", color.female);
-
-  // Add Y axis
-  svg.append("g").call(d3.axisLeft(y).tickFormat(d => `${d}s`));
-
-  // Add X axis
-  svg
-    .append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).tickFormat(d3.format(".0%")));
-
-  // Add axis labels
-  svg
-    .append("text")
-    .attr("x", width / 2)
-    .attr("y", height + 35)
-    .attr("text-anchor", "middle")
-    .text("Percentage");
-
-  svg
-    .append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", -45)
-    .attr("text-anchor", "middle")
-    .text("Decade");
-
-  // Add legend
-  const legend = svg
-    .selectAll(".legend")
-    .data([
-      { label: "Male", color: color.male },
-      { label: "Female", color: color.female },
-    ])
-    .enter()
-    .append("g")
-    .attr("class", "legend")
-    .attr("transform", (d, i) => `translate(${width + 10},${i * 20})`);
-
-  legend
-    .append("rect")
-    .attr("x", 0)
-    .attr("y", 4)
-    .attr("width", 12)
-    .attr("height", 12)
-    .style("fill", d => d.color);
-
-  legend
-    .append("text")
-    .attr("x", 18)
-    .attr("y", 10)
-    .attr("dy", "0.35em")
-    .style("font-size", "12px")
-    .text(d => d.label);
-};
 
 document.getElementById("update-viz3").onclick = updateViz3;
 
