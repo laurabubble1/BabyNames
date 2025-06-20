@@ -34,8 +34,8 @@ function updateViz1() {
   const input = document.getElementById("name-select").value;
   const names = input
     .split(",")
-    .map((d) => d.trim().toUpperCase())
-    .filter((d) => d);
+    .map((n) => n.trim().toUpperCase())
+    .filter((n) => n);
 
   // Filter data for selected names
   const filtered = data.filter(
@@ -69,8 +69,8 @@ function updateViz1() {
   // Select the existing SVG, set its size, and append a group for the chart
   const svg = d3
     .select("#viz1-svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("width", 700)
+    .attr("height", 400)
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -118,11 +118,9 @@ function updateViz1() {
     .attr("transform", `translate(${width}, ${-margin.top + 10})`)
     .attr("text-anchor", "end");
 
-  const legendSpacing = 100; // space between legends
-
   nested.forEach((d, i) => {
     const legend = legendGroup.append("g")
-      .attr("transform", `translate(${-i * legendSpacing}, 0)`);
+      .attr("transform", `translate(${-i * 100}, 0)`);
 
     legend.append("rect")
       .attr("x", 0)
@@ -159,7 +157,7 @@ function updateViz1() {
 // Button click
 document.getElementById("update-viz1").onclick = updateViz1;
 
-// Enter key on input
+// Enter key
 document.getElementById("name-select").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
     updateViz1();
@@ -179,11 +177,6 @@ function updateViz2() {
     .map((n) => n.trim().toUpperCase())
     .filter((n) => n);
 
-  if (!names.length) {
-    alert("Please enter at least one name.");
-    return;
-  }
-
   // Load GeoJSON data for French departments
   d3.json("departements-version-simplifiee.geojson").then((geo) => {
     const container = d3.select("#viz2-cards");
@@ -193,7 +186,7 @@ function updateViz2() {
 
     // Determine grid size based on number of names
     let gridSize = 1;
-    if (n <= 2) {
+    if (n <= 2 && n > 0) {
       gridSize = n;
     } else if (n >= 8) {
       gridSize = 4;
@@ -205,7 +198,7 @@ function updateViz2() {
     const legendHeight = 10;
     const legendWidth = svgSize * 0.6;
 
-    names.forEach((name) => {
+    for (const name of names) {
       // Filter data for the selected name
       const filtered = data.filter(
         (d) => d.preusuel && d.preusuel.toUpperCase() === name
@@ -313,13 +306,14 @@ function updateViz2() {
         .call(legendAxis)
         .selectAll("text")
         .style("font-size", "10px");
-    })
+    }
   })
 }
 
+// Button click
 document.getElementById("update-viz2").onclick = updateViz2;
 
-// Enter key on input
+// Enter key
 document.getElementById("region-name-select").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
     updateViz2();
@@ -329,6 +323,7 @@ document.getElementById("region-name-select").addEventListener("keydown", functi
 
 // Visualization 3: Gender Effects
 function updateViz3() {
+  // Get the input names (comma-separated)
   if (!data.length) {
     alert("Please load the data first.");
     return;
@@ -339,11 +334,6 @@ function updateViz3() {
     .split(",")
     .map((n) => n.trim().toUpperCase())
     .filter((n) => n);
-
-  if (!names.length) {
-    alert("Please enter at least one name.");
-    return;
-  }
 
   const container = d3.select("#viz3-cards");
   container.selectAll("*").remove(); // Clear previous charts
@@ -361,7 +351,7 @@ function updateViz3() {
   const width = svgSize - margin.left - margin.right;
   const height = svgSize - margin.top - margin.bottom;
 
-  names.forEach((name) => {
+  for (const name of names) {
     const filtered = data
       .filter((d) => d.preusuel && d.preusuel.toUpperCase() === name && d.annais !== "XXXX")
       .map((d) => ({
@@ -514,14 +504,14 @@ function updateViz3() {
       .attr("y", -4)
       .style("font-size", "10px")
       .text((d) => d.label);
-  })
+  }
 }
 
 
-
+// Button click
 document.getElementById("update-viz3").onclick = updateViz3;
 
-// Enter key on input
+// Enter key
 document.getElementById("gender-name-select").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
     updateViz3();
